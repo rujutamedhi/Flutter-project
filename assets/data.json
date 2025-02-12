@@ -1,0 +1,43 @@
+{
+  "dishes": [
+    {
+      "name": "Pav Bhaji",
+      "ingredients": [
+        { "name": "Potatoes", "weight": "500g" },
+        { "name": "Tomatoes", "weight": "250g" },
+        { "name": "Onions", "weight": "150g" },
+        { "name": "Pav Bhaji Masala", "weight": "2 tbsp" },
+        { "name": "Butter", "weight": "50g" },
+        { "name": "Capsicum", "weight": "100g" },
+        { "name": "Garlic", "weight": "10g" },
+        { "name": "Green Peas", "weight": "100g" }
+      ]
+    },
+    {
+      "name": "Chinese Noodles",
+      "ingredients": [
+        { "name": "Noodles", "weight": "200g" },
+        { "name": "Capsicum", "weight": "100g" },
+        { "name": "Carrots", "weight": "100g" },
+        { "name": "Spring Onions", "weight": "50g" },
+        { "name": "Soy Sauce", "weight": "2 tbsp" },
+        { "name": "Vinegar", "weight": "1 tbsp" },
+        { "name": "Garlic", "weight": "10g" },
+        { "name": "Oil", "weight": "2 tbsp" }
+      ]
+    },
+    {
+      "name": "Pulao",
+      "ingredients": [
+        { "name": "Basmati Rice", "weight": "250g" },
+        { "name": "Carrots", "weight": "100g" },
+        { "name": "Green Peas", "weight": "100g" },
+        { "name": "Beans", "weight": "100g" },
+        { "name": "Onions", "weight": "100g" },
+        { "name": "Cumin Seeds", "weight": "1 tsp" },
+        { "name": "Ghee", "weight": "2 tbsp" },
+        { "name": "Bay Leaf", "weight": "1 leaf" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "450066356671",
+    "project_id": "bigbasket-88e7a",
+    "storage_bucket": "bigbasket-88e7a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:450066356671:android:ac35b0fd4d77f3c1cc290a",
+        "android_client_info": {
+          "package_name": "com.example.bigbasket_website"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBZa0rWGM8bt17Cm1Mh6m3S-bZzekPgP34"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:450066356671:android:90b74270a5226fddcc290a",
+        "android_client_info": {
+          "package_name": "io.bigbasket.myapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBZa0rWGM8bt17Cm1Mh6m3S-bZzekPgP34"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
