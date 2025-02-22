@@ -1,19 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:bigbasket_website/home.dart'; //
-void main() {
-  runApp(const MyApp());
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print("✅ Firebase Connection Successful");
+  } catch (e) {
+    print("❌ Firebase Initialization Failed: $e");
+  }
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Login Screen',
-      theme: ThemeData(
-        primarySwatch: Colors.red,
-      ),
+      theme: ThemeData(primarySwatch: Colors.red),
       home: const LoginScreen(),
     );
   }
@@ -28,39 +39,23 @@ class LoginScreen extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Top image section
             Container(
               height: 250,
               decoration: const BoxDecoration(
                 image: DecorationImage(
-                  image: NetworkImage(
-                      'assets/loginnn.png'),
+                  image: AssetImage('assets/loginnn.png'),
                   fit: BoxFit.cover,
                 ),
               ),
-              child: const Padding(
-                padding: EdgeInsets.all(24.0),
-                child: Align(
-                  alignment: Alignment.bottomLeft,
-
-                ),
-              ),
             ),
-            // Login form section
             Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    'Login',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  const Text('Login',
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 24),
-                  // Social login buttons
                   Row(
                     children: [
                       Expanded(
@@ -71,7 +66,6 @@ class LoginScreen extends StatelessWidget {
                               style: TextStyle(color: Colors.white)),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF3B5998),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                         ),
                       ),
@@ -79,85 +73,44 @@ class LoginScreen extends StatelessWidget {
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: () {},
-                          icon: const Icon(Icons.g_mobiledata,
-                              color: Colors.black87),
+                          icon: const Icon(Icons.g_mobiledata, color: Colors.black87),
                           label: const Text('GOOGLE',
                               style: TextStyle(color: Colors.black87)),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 24),
-                  const Text(
-                    'or',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                  const SizedBox(height: 24),
-                  // Email field
                   TextField(
                     decoration: InputDecoration(
                       hintText: 'Email',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(4),
-                      ),
+                      border: OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // Password field
                   TextField(
                     obscureText: true,
                     decoration: InputDecoration(
                       hintText: 'Password',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(4),
-                      ),
+                      border: OutlineInputBorder(),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  // Remember me checkbox
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: false,
-                        onChanged: (bool? value) {},
-                      ),
-                      const Text('Remember me'),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: () {},
-                        child: const Text('TERMS & CONDITIONS',
-                            style: TextStyle(color: Colors.green)),
-                      ),
-                    ],
-                  ),
                   const SizedBox(height: 24),
-                  // Login button
                   ElevatedButton(
                     onPressed: () {
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
                           builder: (context) => const HomeScreen(),
-                        ), // Navigate to HomePage
+                        ),
                       );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                     child: const Text('LOGIN', style: TextStyle(color: Colors.white)),
                   ),
-
                   const SizedBox(height: 24),
-                  // Bottom text
-                  const Text(
-                    'New to the platform?',
-                    textAlign: TextAlign.center,
-                  ),
                   TextButton(
                     onPressed: () {
                       Navigator.push(
@@ -167,7 +120,6 @@ class LoginScreen extends StatelessWidget {
                     },
                     child: const Text('REGISTER HERE', style: TextStyle(color: Colors.green)),
                   ),
-
                 ],
               ),
             ),
@@ -178,6 +130,9 @@ class LoginScreen extends StatelessWidget {
   }
 }
 
+
+
+
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -185,173 +140,127 @@ class RegisterScreen extends StatefulWidget {
   _RegisterScreenState createState() => _RegisterScreenState();
 }
 
-
-
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-
-  // Controllers to store user input
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
 
+  // Function to register user
+  void registerUser() async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        // Register user in Firebase Authentication
+        UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+
+        // Get the user ID
+        String userId = userCredential.user!.uid;
+
+        // Store user details in Firestore
+        await FirebaseFirestore.instance.collection("users").doc(userId).set({
+          "name": _nameController.text.trim(),
+          "email": _emailController.text.trim(),
+          "phone": _phoneController.text.trim(),
+          "address": _addressController.text.trim(),
+          "timestamp": FieldValue.serverTimestamp(),
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Registration Successful!')),
+        );
+
+        Navigator.pop(context); // Go back to Login Screen
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Registration Failed: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Register')),
       body: SingleChildScrollView(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.only(top: 50.0, left: 16.0, right: 16.0), // Top padding added
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 400), // Limits form width for centering
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min, // Keeps form compact
-                  children: [
-                    const Text(
-                      'Create Your Account',
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Name Field
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Full Name',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.person),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your name';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 15),
-
-                    // Email Field
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.email),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-                          return 'Enter a valid email';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 15),
-
-                    // Phone Number Field
-                    TextFormField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(
-                        labelText: 'Phone Number',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.phone),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your phone number';
-                        }
-                        if (value.length != 10) {
-                          return 'Phone number must be 10 digits';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 15),
-
-                    // Password Field
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Password',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.lock),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a password';
-                        }
-                        if (value.length < 6) {
-                          return 'Password must be at least 6 characters long';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 15),
-
-                    // Address Field
-                    TextFormField(
-                      controller: _addressController,
-                      decoration: const InputDecoration(
-                        labelText: 'Address',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.location_on),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your address';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 25),
-
-                    // Register Button
-                    SizedBox(
-                      width: double.infinity, // Makes the button take the full width of the parent
-                      child: ElevatedButton(
-                        onPressed: () {
-                          if (_formKey.currentState!.validate()) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Registration Successful!')),
-                            );
-                            Navigator.pop(context);
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: const Text('REGISTER', style: TextStyle(color: Colors.white)),
-                      ),
-                    ),
-
-                    const SizedBox(height: 15),
-
-                    // Already Registered? Login Text
-                    TextButton(
-                      onPressed: () {
-                        // Navigate to login screen
-                        Navigator.pop(context); // Replace with correct navigation if needed
-                      },
-                      child: const Text(
-                        'Already registered? Login',
-                        style: TextStyle(fontSize: 16, color: Colors.green),
-                      ),
-                    ),
-                  ],
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                const Text('Create Your Account',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Full Name',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.person),
+                  ),
+                  validator: (value) =>
+                  value!.isEmpty ? 'Please enter your name' : null,
                 ),
-              ),
+                const SizedBox(height: 15),
+                TextFormField(
+                  controller: _emailController,
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.email),
+                  ),
+                  validator: (value) =>
+                  !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value!)
+                      ? 'Enter a valid email'
+                      : null,
+                ),
+                const SizedBox(height: 15),
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Password',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.lock),
+                  ),
+                  validator: (value) =>
+                  value!.length < 6 ? 'Password must be at least 6 characters' : null,
+                ),
+                const SizedBox(height: 15),
+                TextFormField(
+                  controller: _phoneController,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone Number',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.phone),
+                  ),
+                  validator: (value) =>
+                  value!.isEmpty ? 'Please enter your phone number' : null,
+                ),
+                const SizedBox(height: 15),
+                TextFormField(
+                  controller: _addressController,
+                  decoration: const InputDecoration(
+                    labelText: 'Address',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.home),
+                  ),
+                  validator: (value) =>
+                  value!.isEmpty ? 'Please enter your address' : null,
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: registerUser, // Call registerUser function
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                  child: const Text('REGISTER', style: TextStyle(color: Colors.white)),
+                ),
+              ],
             ),
           ),
         ),
@@ -359,6 +268,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
+
+
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Home')),
+      body: const Center(child: Text('Welcome to Home Screen!')),
+    );
+  }
+}
+
 
 // import 'package:flutter/material.dart';
 // import 'package:google_fonts/google_fonts.dart';
