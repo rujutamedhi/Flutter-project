@@ -28,7 +28,9 @@ class IceCreamShop extends StatelessWidget {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () {},
+          onPressed: () {
+            Navigator.pop(context);
+          },
         ),
         title: const Text('Ice cream'),
         actions: const [

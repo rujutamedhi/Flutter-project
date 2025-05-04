@@ -36,46 +36,47 @@ class HomePage extends StatelessWidget {
     {
       "name": "Pav Bhaji",
       "ingredients": [
-        {"name": "Potatoes", "weight": "500g"},
-        {"name": "Tomatoes", "weight": "250g"},
-        {"name": "Onions", "weight": "150g"},
-        {"name": "Pav Bhaji Masala", "weight": "2 tbsp"},
-        {"name": "Butter", "weight": "50g"},
-        {"name": "Capsicum", "weight": "100g"},
-        {"name": "Garlic", "weight": "10g"},
-        {"name": "Green Peas", "weight": "100g"}
+        { "name": "Potatoes", "weight": "500g", "price": 25 },
+        { "name": "Tomatoes", "weight": "250g", "price": 15 },
+        { "name": "Onions", "weight": "150g", "price": 10 },
+        { "name": "Pav Bhaji Masala", "weight": "20g", "price": 15 },
+        { "name": "Butter", "weight": "50g", "price": 20 },
+        { "name": "Capsicum", "weight": "100g", "price": 15 },
+        { "name": "Garlic", "weight": "10g", "price": 5 },
+        { "name": "Green Peas", "weight": "100g", "price": 15 }
       ],
       "image": "assets/pavbhaji.png"
     },
     {
       "name": "Chinese Noodles",
       "ingredients": [
-        { "name": "Noodles", "weight": "200g" },
-        { "name": "Capsicum", "weight": "100g" },
-        { "name": "Carrots", "weight": "100g" },
-        { "name": "Spring Onions", "weight": "50g" },
-        { "name": "Soy Sauce", "weight": "2 tbsp" },
-        { "name": "Vinegar", "weight": "1 tbsp" },
-        { "name": "Garlic", "weight": "10g" },
-        { "name": "Oil", "weight": "2 tbsp" }
+        { "name": "Noodles", "weight": "200g", "price": 25 },
+        { "name": "Capsicum", "weight": "100g", "price": 15 },
+        { "name": "Carrots", "weight": "100g", "price": 12 },
+        { "name": "Spring Onions", "weight": "50g", "price": 10 },
+        { "name": "Soy Sauce", "weight": "20g", "price": 8 },
+        { "name": "Vinegar", "weight": "20ml", "price": 6 },
+        { "name": "Garlic", "weight": "10g", "price": 5 },
+        { "name": "Oil", "weight": "20ml", "price": 10 }
       ],
-  "image":"assets/noodles.png"
+      "image": "assets/noodles.png"
     },
     {
       "name": "Pulao",
       "ingredients": [
-        {"name": "Basmati Rice", "weight": "250g"},
-        {"name": "Carrots", "weight": "100g"},
-        {"name": "Green Peas", "weight": "100g"},
-        {"name": "Beans", "weight": "100g"},
-        {"name": "Onions", "weight": "100g"},
-        {"name": "Cumin Seeds", "weight": "1 tsp"},
-        {"name": "Ghee", "weight": "2 tbsp"},
-        {"name": "Bay Leaf", "weight": "1 leaf"}
+        { "name": "Basmati Rice", "weight": "250g", "price": 30 },
+        { "name": "Carrots", "weight": "100g", "price": 12 },
+        { "name": "Green Peas", "weight": "100g", "price": 15 },
+        { "name": "Beans", "weight": "100g", "price": 15 },
+        { "name": "Onions", "weight": "100g", "price": 8 },
+        { "name": "Cumin Seeds", "weight": "10g", "price": 10 },
+        { "name": "Ghee", "weight": "20g", "price": 20 },
+        { "name": "Bay Leaf", "weight": "20g", "price": 5 }
       ],
       "image": "assets/poolao.png"
-    },
+    }
   ];
+
 
   @override
   Widget build(BuildContext context) {

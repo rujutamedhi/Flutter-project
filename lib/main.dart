@@ -3,8 +3,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
 import 'home.dart';
+import 'dart:async';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
@@ -29,8 +30,6 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -59,22 +58,41 @@ class _LoginScreenState extends State<LoginScreen> {
       User? user = userCredential.user;
 
       if (user != null) {
-        // Check if user exists in Firestore
-        DocumentSnapshot userDoc = await FirebaseFirestore.instance
-            .collection("users")
-            .doc(user.uid)
-            .get();
+        // Check if email is verified
+        if (user.emailVerified) {
+          // Check if user exists in Firestore
+          DocumentSnapshot userDoc = await FirebaseFirestore.instance
+              .collection("users")
+              .doc(user.uid)
+              .get();
 
-        if (userDoc.exists) {
-          // Navigate to HomeScreen after successful login
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()), // Ensure HomeScreen is correct
-          );
+          if (userDoc.exists) {
+            // Navigate to HomeScreen after successful login
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
+          } else {
+            // User not found in Firestore (unlikely), show error
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("User record not found.")),
+            );
+          }
         } else {
-          // User not found in Firestore (unlikely), show error
+          // Email not verified
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("User record not found.")),
+            SnackBar(
+              content: Text("Please verify your email before logging in."),
+              action: SnackBarAction(
+                label: "Resend",
+                onPressed: () async {
+                  await user.sendEmailVerification();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Verification email sent!")),
+                  );
+                },
+              ),
+            ),
           );
         }
       }
@@ -175,7 +193,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         ? const CircularProgressIndicator(color: Colors.white)
                         : const Text('LOGIN', style: TextStyle(color: Colors.white)),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () {
+                      // Navigate to forgot password screen or show dialog
+                      _showForgotPasswordDialog();
+                    },
+                    child: const Text('Forgot Password?', style: TextStyle(color: Colors.grey)),
+                  ),
+                  const SizedBox(height: 8),
                   TextButton(
                     onPressed: () {
                       Navigator.push(
@@ -193,10 +219,49 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+
+  void _showForgotPasswordDialog() {
+    final TextEditingController resetEmailController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset Password'),
+        content: TextField(
+          controller: resetEmailController,
+          decoration: const InputDecoration(
+            hintText: 'Enter your email',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                await FirebaseAuth.instance.sendPasswordResetEmail(
+                  email: resetEmailController.text.trim(),
+                );
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Password reset email sent!')),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error: $e')),
+                );
+              }
+            },
+            child: const Text('SEND'),
+          ),
+        ],
+      ),
+    );
+  }
 }
-
-
-
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -212,10 +277,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
+  bool _isLoading = false;
 
   // Function to register user
   void registerUser() async {
     if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
+
       try {
         // Register user in Firebase Authentication
         UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
@@ -224,26 +294,53 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
 
         // Get the user ID
-        String userId = userCredential.user!.uid;
+        User? user = userCredential.user;
 
-        // Store user details in Firestore
-        await FirebaseFirestore.instance.collection("users").doc(userId).set({
-          "name": _nameController.text.trim(),
-          "email": _emailController.text.trim(),
-          "phone": _phoneController.text.trim(),
-          "address": _addressController.text.trim(),
-          "timestamp": FieldValue.serverTimestamp(),
-        });
+        if (user != null) {
+          // Send email verification
+          await user.sendEmailVerification();
+
+          // Store user details in Firestore
+          await FirebaseFirestore.instance.collection("users").doc(user.uid).set({
+            "name": _nameController.text.trim(),
+            "email": _emailController.text.trim(),
+            "phone": _phoneController.text.trim(),
+            "address": _addressController.text.trim(),
+            "timestamp": FieldValue.serverTimestamp(),
+            "emailVerified": false,
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Registration Successful! Please check your email to verify your account.'),
+              duration: Duration(seconds: 8),
+            ),
+          );
+
+          Navigator.pop(context); // Go back to Login Screen
+        }
+      } on FirebaseAuthException catch (e) {
+        String errorMessage = "Registration Failed";
+
+        if (e.code == 'email-already-in-use') {
+          errorMessage = "This email is already registered.";
+        } else if (e.code == 'weak-password') {
+          errorMessage = "The password provided is too weak.";
+        } else if (e.code == 'invalid-email') {
+          errorMessage = "The email address is not valid.";
+        }
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registration Successful!')),
+          SnackBar(content: Text(errorMessage)),
         );
-
-        Navigator.pop(context); // Go back to Login Screen
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Registration Failed: $e')),
         );
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -321,9 +418,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: registerUser, // Call registerUser function
+                  onPressed: _isLoading ? null : registerUser,
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                  child: const Text('REGISTER', style: TextStyle(color: Colors.white)),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text('REGISTER', style: TextStyle(color: Colors.white)),
                 ),
               ],
             ),
@@ -334,208 +433,126 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 }
 
+// Add this class to show a verification screen (optional)
+class EmailVerificationScreen extends StatefulWidget {
+  final User user;
 
+  const EmailVerificationScreen({super.key, required this.user});
 
+  @override
+  _EmailVerificationScreenState createState() => _EmailVerificationScreenState();
+}
 
+class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
+  bool _isEmailVerified = false;
+  bool _canResendEmail = true;
+  Timer? _timer;
 
-// import 'package:flutter/material.dart';
-// import 'package:google_fonts/google_fonts.dart';
-//
-// void main() {
-//   runApp(const MyApp());
-// }
-//
-// class MyApp extends StatelessWidget {
-//   const MyApp({Key? key}) : super(key: key);
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return MaterialApp(
-//       debugShowCheckedModeBanner: false,
-//       theme: ThemeData(
-//         textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme),
-//       ),
-//       home: const RegistrationForm(),
-//     );
-//   }
-// }
-//
-// class RegistrationForm extends StatefulWidget {
-//   const RegistrationForm({Key? key}) : super(key: key);
-//
-//   @override
-//   _RegistrationFormState createState() => _RegistrationFormState();
-// }
-//
-// class _RegistrationFormState extends State<RegistrationForm> {
-// final _formKey = GlobalKey<FormState>();
-// final _controllers = List.generate(5, (_) => TextEditingController());
-// final _focusNodes = List.generate(5, (_) => FocusNode());
-//
-// @override
-// void dispose() {
-//   for (var controller in _controllers) {
-//     controller.dispose();
-//   }
-//   for (var node in _focusNodes) {
-//     node.dispose();
-//   }
-//   super.dispose();
-// }
-//
-// @override
-// Widget build(BuildContext context) {
-//   return Scaffold(
-//     body: Container(
-//       decoration: const BoxDecoration(
-//         gradient: LinearGradient(
-//           begin: Alignment.topLeft,
-//           end: Alignment.bottomRight,
-//           colors: [Color(0xFFE8F5E9), Colors.white],
-//         ),
-//       ),
-//       child: SafeArea(
-//         child: CustomScrollView(
-//           slivers: [
-//             SliverAppBar(
-//               floating: true,
-//               backgroundColor: Colors.transparent,
-//               elevation: 0,
-//               flexibleSpace: FlexibleSpaceBar(
-//                 title: Text(
-//                   'Order Form',
-//                   style: GoogleFonts.poppins(
-//                     color: Colors.green[800],
-//                     fontWeight: FontWeight.w600,
-//                   ),
-//                 ),
-//               ),
-//             ),
-//             SliverToBoxAdapter(
-//               child: Padding(
-//                 padding: const EdgeInsets.all(24.0),
-//                 child: Form(
-//                   key: _formKey,
-//                   child: Column(
-//                     crossAxisAlignment: CrossAxisAlignment.start,
-//                     children: [
-//                       Text(
-//                         'Please fill out the form to order',
-//                         style: GoogleFonts.poppins(
-//                           fontSize: 16,
-//                           color: Colors.green[800],
-//                           fontWeight: FontWeight.w500,
-//                         ),
-//                       ),
-//                       const SizedBox(height: 24),
-//                       ..._buildFormFields(),
-//                       const SizedBox(height: 32),
-//                       _buildSubmitButton(),
-//                     ],
-//                   ),
-//                 ),
-//               ),
-//             ),
-//           ],
-//         ),
-//       ),
-//     ),
-//   );
-// }
-//
-// List<Widget> _buildFormFields() {
-//   final labels = ['First Name', 'Last Name', 'Address', 'Landmark', 'Mobile Number'];
-//   final icons = [Icons.person, Icons.person, Icons.home, Icons.location_on, Icons.phone];
-//
-//   return List.generate(
-//     5,
-//         (index) => Padding(
-//       padding: const EdgeInsets.only(bottom: 16),
-//       child: TextFormField(
-//         controller: _controllers[index],
-//         focusNode: _focusNodes[index],
-//         decoration: _getInputDecoration(labels[index], icons[index]),
-//         validator: (value) {
-//           if (value == null || value.isEmpty) {
-//             return 'Please enter ${labels[index].toLowerCase()}';  // Ensures the field is required
-//           }
-//           if (index == 4 && value.length != 10) {
-//             return 'Mobile number must be 10 digits'; // Mobile number validation
-//           }
-//           return null;
-//         },
-//         onFieldSubmitted: (_) {
-//           if (index < 4) {
-//             FocusScope.of(context).requestFocus(_focusNodes[index + 1]);
-//           }
-//         },
-//         keyboardType: index == 4 ? TextInputType.phone : TextInputType.text,
-//       ),
-//     ),
-//   );
-// }
-//
-// InputDecoration _getInputDecoration(String label, IconData icon) {
-//   return InputDecoration(
-//     labelText: label,
-//     prefixIcon: Icon(icon, color: Colors.green[800]),
-//     labelStyle: TextStyle(color: Colors.green[800]),
-//     enabledBorder: OutlineInputBorder(
-//       borderRadius: BorderRadius.circular(12),
-//       borderSide: BorderSide(color: Colors.green[200]!),
-//     ),
-//     focusedBorder: OutlineInputBorder(
-//       borderRadius: BorderRadius.circular(12),
-//       borderSide: BorderSide(color: Colors.green[800]!, width: 2),
-//     ),
-//     errorBorder: OutlineInputBorder(
-//       borderRadius: BorderRadius.circular(12),
-//       borderSide: BorderSide(color: Colors.red[400]!),
-//     ),
-//     focusedErrorBorder: OutlineInputBorder(
-//       borderRadius: BorderRadius.circular(12),
-//       borderSide: BorderSide(color: Colors.red[400]!, width: 2),
-//     ),
-//     filled: true,
-//     fillColor: Colors.white,
-//   );
-// }
-//
-// Widget _buildSubmitButton() {
-//   return SizedBox(
-//     width: double.infinity,
-//     child: ElevatedButton(
-//       onPressed: _submitForm,
-//       style: ElevatedButton.styleFrom(
-//         backgroundColor: Colors.green[800],
-//         padding: const EdgeInsets.symmetric(vertical: 16),
-//         shape: RoundedRectangleBorder(
-//           borderRadius: BorderRadius.circular(12),
-//         ),
-//       ),
-//       child: Text(
-//         'SUBMIT',
-//         style: GoogleFonts.poppins(
-//           color: Colors.white,
-//           fontSize: 18,
-//           fontWeight: FontWeight.w600,
-//         ),
-//       ),
-//     ),
-//   );
-// }
-//
-// void _submitForm() {
-//   if (_formKey.currentState!.validate()) {
-//     ScaffoldMessenger.of(context).showSnackBar(
-//       SnackBar(
-//         content: Text(
-//           'Registration Successful!',
-//           style: GoogleFonts.poppins(),
-//         ),
-//         backgroundColor: Colors.green[800],
-//       ),
-//     );
-//   }
-// }
-// }
+  @override
+  void initState() {
+    super.initState();
+    _isEmailVerified = widget.user.emailVerified;
+
+    if (!_isEmailVerified) {
+      _timer = Timer.periodic(
+        const Duration(seconds: 3),
+            (_) => _checkEmailVerified(),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkEmailVerified() async {
+    // Call after email verification
+    await widget.user.reload();
+
+    setState(() {
+      _isEmailVerified = widget.user.emailVerified;
+    });
+
+    if (_isEmailVerified) {
+      _timer?.cancel();
+
+      // Update verification status in Firestore
+      await FirebaseFirestore.instance
+          .collection("users")
+          .doc(widget.user.uid)
+          .update({"emailVerified": true});
+
+      // Navigate to login screen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
+    }
+  }
+
+  Future<void> _sendVerificationEmail() async {
+    try {
+      await widget.user.sendEmailVerification();
+
+      setState(() {
+        _canResendEmail = false;
+      });
+
+      // Allow resending after 60 seconds
+      await Future.delayed(const Duration(seconds: 60));
+
+      setState(() {
+        _canResendEmail = true;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error sending verification email: $e')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Verify Email')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              'A verification email has been sent to your email address.',
+              style: TextStyle(fontSize: 18),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Please check your email and click on the verification link to proceed.',
+              style: TextStyle(fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: _canResendEmail ? _sendVerificationEmail : null,
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              child: const Text('Resend Email', style: TextStyle(color: Colors.white)),
+            ),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: () {
+                FirebaseAuth.instance.signOut();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                );
+              },
+              child: const Text('Back to Login'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

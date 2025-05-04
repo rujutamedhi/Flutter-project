@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'order_form.dart';
+
 class DishDetails extends StatefulWidget {
   final Map<String, dynamic> dish;
 
@@ -15,7 +16,6 @@ class _DishDetailsState extends State<DishDetails> {
   @override
   void initState() {
     super.initState();
-    // Initialize each ingredient with quantity 1
     ingredientQuantities = {
       for (var ingredient in widget.dish['ingredients']) ingredient['name']: 1
     };
@@ -33,6 +33,18 @@ class _DishDetailsState extends State<DishDetails> {
         ingredientQuantities[ingredient] = ingredientQuantities[ingredient]! - 1;
       });
     }
+  }
+
+  double calculateTotal() {
+    final ingredients = widget.dish['ingredients'] as List<dynamic>;
+    double total = 0;
+    for (var ingredient in ingredients) {
+      final name = ingredient['name'];
+      final quantity = ingredientQuantities[name]!;
+      final price = (ingredient['price'] as num).toDouble();
+      total += price * quantity;
+    }
+    return total;
   }
 
   @override
@@ -66,13 +78,15 @@ class _DishDetailsState extends State<DishDetails> {
                     children: ingredients.map((ingredient) {
                       final String name = ingredient['name'];
                       final String weight = ingredient['weight'];
-
-                      final num initialValue = num.tryParse(weight.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0;
-                      final String unit = weight.replaceAll(RegExp(r'[0-9.]'), '').trim();
+                      final double price = (ingredient['price'] as num).toDouble();
                       final int quantity = ingredientQuantities[name]!;
+
+                      final num weightVal = num.tryParse(weight.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0;
+                      final String unit = weight.replaceAll(RegExp(r'[0-9.]'), '').trim();
 
                       return ListTile(
                         title: Text(name),
+                        subtitle: Text("₹${price.toStringAsFixed(2)} x $quantity = ₹${(price * quantity).toStringAsFixed(2)}"),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -86,11 +100,16 @@ class _DishDetailsState extends State<DishDetails> {
                               icon: const Icon(Icons.add_circle, color: Colors.green),
                             ),
                             const SizedBox(width: 10),
-                            Text("${(initialValue * quantity)} $unit"),
+                            Text("${(weightVal * quantity)} $unit"),
                           ],
                         ),
                       );
                     }).toList(),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    "Total: ₹${calculateTotal().toStringAsFixed(2)}",
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green),
                   ),
                 ],
               ),
@@ -98,7 +117,6 @@ class _DishDetailsState extends State<DishDetails> {
           ],
         ),
       ),
-
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(10),
         child: ElevatedButton(
